@@ -5,8 +5,7 @@ const connectDB = require('./src/config/db');
 
 // Route Imports
 const authRoutes = require('./src/routes/authRoutes');
-const tradeRoutes = require('./src/routes/tradeRoutes');
-const paymentRoutes = require('./src/routes/paymentRoutes'); // Added for activity tracking
+const tradeRoutes = require('./src/routes/tradeRoutes'); 
 
 const app = express();
 
@@ -14,18 +13,16 @@ const app = express();
 connectDB();
 
 // 2. Middleware
-// Updated CORS to be more flexible for deployment
 app.use(cors({
-  origin: '*', // Allows Vercel and Localhost to communicate with this API
+  origin: '*', // Allows your Vercel frontend to communicate with Render
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json());
 
 // 3. Define Routes
-app.use('/api/auth', authRoutes);      // Auth: Register/Login
-app.use('/api/trade', tradeRoutes);    // Trade: Buy/Sell Logic
-app.use('/api/payment', paymentRoutes); // Payment: Activity Logging
+app.use('/api/auth', authRoutes);    // Auth: Register/Login
+app.use('/api/trade', tradeRoutes);  // Trade: Buy/Sell Logic
 
 // Basic Route for Testing (Useful for Render Health Checks)
 app.get('/', (req, res) => {
@@ -42,10 +39,8 @@ app.use((err, req, res, next) => {
 });
 
 // 5. Start Server
-// Render will automatically assign a PORT, but we fallback to 5000 for local testing
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📡 Trade Routes: /api/trade`);
-  console.log(`📡 Payment Logs: /api/payment`);
 });
