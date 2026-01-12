@@ -1,7 +1,10 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'http://localhost:5000/api', // Your backend URL
+  // Automatically switches between your live Render server and your local machine
+  baseURL: window.location.hostname === 'localhost' 
+    ? 'http://localhost:5000/api' 
+    : 'https://crytotrade-pro.onrender.com/api',
 });
 
 // Automatically add JWT token to headers if it exists in localStorage
