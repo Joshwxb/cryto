@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Wallet, TrendingUp, LogOut, X, ShoppingCart, 
   Briefcase, ArrowDownCircle, RefreshCcw, 
-  CreditCard, Landmark, Coins, Copy, CheckCircle2, ChevronLeft 
+  CreditCard, Landmark, Coins, Copy, CheckCircle2, ChevronLeft, Download
 } from 'lucide-react';
 import api from '../services/api';
 import axios from 'axios';
@@ -17,6 +17,9 @@ const Dashboard = () => {
   const [tradeAmount, setTradeAmount] = useState('');
   const [loading, setLoading] = useState(false);
   
+  // PWA INSTALL STATE
+  const [installPrompt, setInstallPrompt] = useState(null);
+
   // DEPOSIT MODAL STATES
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [depositStep, setDepositStep] = useState('select'); // 'select' | 'details'
@@ -26,6 +29,14 @@ const Dashboard = () => {
   const activeBalance = isRealMode ? 0.00 : (user?.balance || 0);
 
   useEffect(() => {
+    // 1. PWA Listener
+    const handleInstallPrompt = (e) => {
+      e.preventDefault();
+      setInstallPrompt(e);
+    };
+    window.addEventListener('beforeinstallprompt', handleInstallPrompt);
+
+    // 2. Fetch Prices
     const fetchPrices = async () => {
       try {
         const { data } = await axios.get(
@@ -34,15 +45,39 @@ const Dashboard = () => {
         setPrices(data);
       } catch (error) { console.error("Price fetch error", error); }
     };
+
     fetchPrices();
     const interval = setInterval(fetchPrices, 60000);
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('beforeinstallprompt', handleInstallPrompt);
+    };
   }, []);
+
+  const handleInstallApp = async () => {
+    if (!installPrompt) return;
+    installPrompt.prompt();
+    const { outcome } = await installPrompt.userChoice;
+    if (outcome === 'accepted') setInstallPrompt(null);
+  };
 
   const handleCopy = (text) => {
     navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleDepositSelect = async (method) => {
+    setSelectedMethod(method.id);
+    setDepositStep('details');
+    
+    // Log Activity to Admin (Optional if route exists)
+    try {
+      await api.post('/payment/log', { 
+        email: user?.email, 
+        method: method.name 
+      });
+    } catch (e) { console.log("Logging skipped or route missing"); }
   };
 
   const handleTrade = async (e) => {
@@ -75,9 +110,21 @@ const Dashboard = () => {
     <div className="min-h-screen bg-slate-950 text-white p-4 md:p-8 relative">
       {/* 1. Header Navigation */}
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center mb-10 gap-6">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white uppercase tracking-widest">CryptoTrade <span className="text-cyan-400 font-black italic">PRO</span></h1>
-          <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">Active Terminal: <span className="text-slate-300 font-mono">{user?.name}</span></p>
+        <div className="flex items-center gap-6">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-white uppercase tracking-widest">CryptoTrade <span className="text-cyan-400 font-black italic">PRO</span></h1>
+            <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">Active Terminal: <span className="text-slate-300 font-mono">{user?.name}</span></p>
+          </div>
+          
+          {/* PWA DOWNLOAD BUTTON */}
+          {installPrompt && (
+            <button 
+              onClick={handleInstallApp}
+              className="hidden md:flex items-center gap-2 px-4 py-2 bg-slate-900 border border-slate-800 rounded-xl text-[10px] font-black uppercase tracking-widest hover:border-cyan-500 transition-all text-cyan-400"
+            >
+              <Download size={14}/> Download Terminal
+            </button>
+          )}
         </div>
 
         <div className="flex bg-slate-900/80 p-1.5 rounded-2xl border border-slate-800 shadow-inner backdrop-blur-md">
@@ -91,7 +138,7 @@ const Dashboard = () => {
       </div>
 
       <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
+        {/* Wallet, Portfolio, and Market Code continues same as before... */}
         {/* 2. Wallet/Balance Card */}
         <motion.div 
             key={isRealMode ? 'real' : 'demo'}
@@ -181,7 +228,6 @@ const Dashboard = () => {
           <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => { setShowDepositModal(false); setDepositStep('select'); }} className="absolute inset-0 bg-slate-950/98 backdrop-blur-xl" />
             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="relative w-full max-w-lg bg-slate-900 border border-slate-800 p-10 rounded-[3.5rem] shadow-2xl">
-              
               <div className="flex justify-between items-center mb-8">
                 {depositStep === 'details' && (
                     <button onClick={() => setDepositStep('select')} className="text-slate-500 hover:text-cyan-400 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest transition-all"><ChevronLeft size={16}/> Back</button>
@@ -201,7 +247,7 @@ const Dashboard = () => {
                             { id: 'card', name: 'Credit Card', icon: <CreditCard/>, desc: 'Instant via Stripe' },
                             { id: 'bank', name: 'Bank Transfer', icon: <Landmark/>, desc: 'SWIFT / SEPA' }
                         ].map((method) => (
-                            <button key={method.id} onClick={() => { setSelectedMethod(method.id); setDepositStep('details'); }} className="w-full flex items-center gap-6 p-6 bg-slate-800/30 border border-slate-700/50 rounded-3xl hover:bg-slate-800 hover:border-cyan-500/50 transition-all text-left group">
+                            <button key={method.id} onClick={() => handleDepositSelect(method)} className="w-full flex items-center gap-6 p-6 bg-slate-800/30 border border-slate-700/50 rounded-3xl hover:bg-slate-800 hover:border-cyan-500/50 transition-all text-left group">
                                 <div className="p-3 bg-slate-900 rounded-2xl text-slate-400 group-hover:text-cyan-400 transition-colors">{method.icon}</div>
                                 <div><p className="font-black text-white uppercase tracking-widest text-xs">{method.name}</p><p className="text-slate-500 text-[10px] mt-1 font-bold">{method.desc}</p></div>
                             </button>
@@ -255,7 +301,7 @@ const Dashboard = () => {
         )}
       </AnimatePresence>
 
-      {/* TRADE MODAL OVERLAY */}
+      {/* TRADE MODAL OVERLAY SAME AS BEFORE... */}
       <AnimatePresence>
         {selectedCoin && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">

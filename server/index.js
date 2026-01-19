@@ -14,10 +14,15 @@ connectDB();
 
 // 2. Middleware
 app.use(cors({
-  origin: '*', // Allows your Vercel frontend to communicate with Render
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  origin: true, // Dynamically allows your Vercel frontend to connect
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
+// Explicitly handle preflight OPTIONS requests for browsers
+app.options('*', cors()); 
+
 app.use(express.json());
 
 // 3. Define Routes
@@ -29,7 +34,12 @@ app.get('/', (req, res) => {
   res.send('Crypto Trading API is live and running...');
 });
 
-// 4. Global Error Handler
+// 4. Handle 404 (Route not found)
+app.use((req, res, next) => {
+  res.status(404).json({ message: `Route not found - ${req.originalUrl}` });
+});
+
+// 5. Global Error Handler
 app.use((err, req, res, next) => {
   const statusCode = res.statusCode === 200 ? 500 : res.statusCode;
   res.status(statusCode).json({
@@ -38,9 +48,9 @@ app.use((err, req, res, next) => {
   });
 });
 
-// 5. Start Server
+// 6. Start Server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📡 Trade Routes: /api/trade`);
+  console.log(`📡 API Base: https://crytotrade-pro-0exo.onrender.com/api`);
 });
