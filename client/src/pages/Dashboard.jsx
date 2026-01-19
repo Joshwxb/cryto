@@ -7,7 +7,7 @@ import {
   CreditCard, Landmark, Coins, Copy, CheckCircle2, ChevronLeft, Download
 } from 'lucide-react';
 import api from '../services/api';
-import axios from 'axios';
+// axios import removed as we are now using our custom 'api' instance exclusively
 
 const Dashboard = () => {
   const { user, logout, setUser, isRealMode, setIsRealMode } = useContext(AuthContext);
@@ -17,12 +17,9 @@ const Dashboard = () => {
   const [tradeAmount, setTradeAmount] = useState('');
   const [loading, setLoading] = useState(false);
   
-  // PWA INSTALL STATE
   const [installPrompt, setInstallPrompt] = useState(null);
-
-  // DEPOSIT MODAL STATES
   const [showDepositModal, setShowDepositModal] = useState(false);
-  const [depositStep, setDepositStep] = useState('select'); // 'select' | 'details'
+  const [depositStep, setDepositStep] = useState('select'); 
   const [selectedMethod, setSelectedMethod] = useState(null);
   const [copied, setCopied] = useState(false);
 
@@ -36,18 +33,19 @@ const Dashboard = () => {
     };
     window.addEventListener('beforeinstallprompt', handleInstallPrompt);
 
-    // 2. Fetch Prices
+    // 2. UPDATED: Fetch Prices via your Backend Proxy
     const fetchPrices = async () => {
       try {
-        const { data } = await axios.get(
-          'https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=bitcoin,ethereum,binancecoin,solana,cardano&order=market_cap_desc'
-        );
+        // This now hits: https://crytotrade-pro-0exo.onrender.com/api/trade/coins
+        const { data } = await api.get('/trade/coins');
         setPrices(data);
-      } catch (error) { console.error("Price fetch error", error); }
+      } catch (error) { 
+        console.error("Market data fetch error:", error); 
+      }
     };
 
     fetchPrices();
-    const interval = setInterval(fetchPrices, 60000);
+    const interval = setInterval(fetchPrices, 60000); // Refresh every minute
     return () => {
       clearInterval(interval);
       window.removeEventListener('beforeinstallprompt', handleInstallPrompt);
@@ -70,14 +68,12 @@ const Dashboard = () => {
   const handleDepositSelect = async (method) => {
     setSelectedMethod(method.id);
     setDepositStep('details');
-    
-    // Log Activity to Admin (Optional if route exists)
     try {
       await api.post('/payment/log', { 
         email: user?.email, 
         method: method.name 
       });
-    } catch (e) { console.log("Logging skipped or route missing"); }
+    } catch (e) { console.log("Logging skipped"); }
   };
 
   const handleTrade = async (e) => {
@@ -116,7 +112,6 @@ const Dashboard = () => {
             <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">Active Terminal: <span className="text-slate-300 font-mono">{user?.name}</span></p>
           </div>
           
-          {/* PWA DOWNLOAD BUTTON */}
           {installPrompt && (
             <button 
               onClick={handleInstallApp}
@@ -138,8 +133,6 @@ const Dashboard = () => {
       </div>
 
       <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Wallet, Portfolio, and Market Code continues same as before... */}
-        {/* 2. Wallet/Balance Card */}
         <motion.div 
             key={isRealMode ? 'real' : 'demo'}
             initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} 
@@ -162,7 +155,6 @@ const Dashboard = () => {
           )}
         </motion.div>
 
-        {/* 3. Portfolio Box */}
         <div className="bg-slate-900 border border-slate-800 p-8 rounded-[3rem] flex flex-col h-72 shadow-2xl">
             <h3 className="flex items-center gap-3 font-black mb-6 text-slate-400 text-[10px] uppercase tracking-[0.3em]"><Briefcase size={16} className="text-cyan-400"/> Inventory</h3>
             <div className="overflow-y-auto flex-grow space-y-4 pr-2 scrollbar-hide">
@@ -189,11 +181,10 @@ const Dashboard = () => {
             </div>
         </div>
 
-        {/* 4. Live Market List */}
         <div className="lg:col-span-3 space-y-6">
           <h3 className="flex items-center gap-3 font-black text-xl px-2 mt-8 text-white uppercase tracking-widest italic"><TrendingUp className="text-cyan-400" size={24}/> GLOBAL TICKER</h3>
           <div className="grid grid-cols-1 gap-4">
-            {prices.map((coin) => {
+            {prices.length > 0 ? prices.map((coin) => {
                 const isOwned = !isRealMode && user?.portfolio?.some(asset => asset.coinId === coin.id && asset.amount > 0);
                 return (
                     <motion.div key={coin.id} whileHover={{ scale: 1.005 }} className="flex items-center justify-between p-6 bg-slate-900/40 border border-slate-800 rounded-[2rem] backdrop-blur-xl transition-all">
@@ -217,12 +208,13 @@ const Dashboard = () => {
                         </div>
                     </motion.div>
                 );
-            })}
+            }) : (
+              <div className="text-center py-20 opacity-30 uppercase font-black tracking-[0.5em]">Syncing Market Data...</div>
+            )}
           </div>
         </div>
       </div>
 
-      {/* DEPOSIT MODAL OVERLAY */}
       <AnimatePresence>
         {showDepositModal && (
           <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
@@ -301,7 +293,6 @@ const Dashboard = () => {
         )}
       </AnimatePresence>
 
-      {/* TRADE MODAL OVERLAY SAME AS BEFORE... */}
       <AnimatePresence>
         {selectedCoin && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
