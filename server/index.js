@@ -20,9 +20,10 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// FIX FOR NODE v22: Use '/:any*' instead of '(.*)' or '*'
-// This gives the wildcard a name ('any') which satisfies the new library rules
-app.options('/:any*', cors()); 
+// FINAL FIX FOR NODE v22: 
+// Using a Regular Expression literal /.*/ instead of a string '*' or '/:any*'
+// This bypasses the path-to-regexp parser causing the PathError.
+app.options(/.*/, cors()); 
 
 app.use(express.json());
 
