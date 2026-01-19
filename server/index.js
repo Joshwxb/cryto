@@ -13,25 +13,21 @@ const app = express();
 connectDB();
 
 // 2. Middleware
-app.use(cors({
-  origin: true, 
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
+// UNIVERSAL CORS: Allows all origins to prevent the "No Access-Control-Allow-Origin" error
+app.use(cors()); 
+
+// Support JSON bodies
+app.use(express.json());
 
 // FINAL FIX FOR NODE v22: 
-// Using a Regular Expression literal /.*/ instead of a string '*' or '/:any*'
-// This bypasses the path-to-regexp parser causing the PathError.
+// Using a Regular Expression literal /.*/ to handle preflight OPTIONS
 app.options(/.*/, cors()); 
-
-app.use(express.json());
 
 // 3. Define Routes
 app.use('/api/auth', authRoutes);    
 app.use('/api/trade', tradeRoutes);  
 
-// Basic Route for Testing
+// Basic Route for Testing (Health Check)
 app.get('/', (req, res) => {
   res.send('Crypto Trading API is live and running...');
 });
