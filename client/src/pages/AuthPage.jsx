@@ -1,16 +1,19 @@
 import React, { useState, useContext } from 'react';
 import { motion } from 'framer-motion';
 import { AuthContext } from '../context/AuthContext';
-import api from '../services/api'; // Ensure this points to your axios instance
+import api from '../services/api'; 
 import { Mail, Lock, User, TrendingUp } from 'lucide-react';
 
 const AuthPage = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [formData, setFormData] = useState({ name: '', email: '', password: '' });
+  const [isLoading, setIsLoading] = useState(false); // NEW: Added loading state
   const { login } = useContext(AuthContext);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsLoading(true); // START PROCESSING
+    
     try {
       if (isLogin) {
         // Log in an existing user
@@ -24,12 +27,13 @@ const AuthPage = () => {
     } catch (err) {
       console.error("Auth Error:", err);
       alert("Auth Failed: " + (err.response?.data?.message || "Check your server connection"));
+    } finally {
+      setIsLoading(false); // STOP PROCESSING (even if it fails)
     }
   };
 
   return (
     <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4 overflow-hidden relative">
-      {/* Dynamic Background Glow */}
       <div className="absolute w-[500px] h-[500px] bg-cyan-500/10 rounded-full blur-[120px] -top-20 -left-20" />
       <div className="absolute w-[500px] h-[500px] bg-purple-500/10 rounded-full blur-[120px] -bottom-20 -right-20" />
       
@@ -88,9 +92,10 @@ const AuthPage = () => {
             whileHover={{ scale: 1.01 }}
             whileTap={{ scale: 0.98 }}
             type="submit"
-            className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-bold py-3.5 rounded-xl mt-6 shadow-xl shadow-cyan-500/20 transition-all"
+            disabled={isLoading} // NEW: Disable button while loading
+            className={`w-full bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 font-bold py-3.5 rounded-xl mt-6 shadow-xl transition-all ${isLoading ? 'opacity-70 cursor-not-allowed' : 'hover:from-cyan-400 hover:to-blue-500 shadow-cyan-500/20'}`}
           >
-            {isLogin ? "Sign In" : "Create Account"}
+            {isLoading ? "Processing..." : (isLogin ? "Sign In" : "Create Account")}
           </motion.button>
         </form>
 
@@ -98,6 +103,7 @@ const AuthPage = () => {
           <p className="text-slate-500 text-sm">
             {isLogin ? "Don't have an account?" : "Already have an account?"}
             <button 
+              disabled={isLoading}
               onClick={() => setIsLogin(!isLogin)}
               className="text-cyan-400 ml-2 hover:text-cyan-300 font-semibold transition-colors"
             >
