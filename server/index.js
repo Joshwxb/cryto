@@ -20,8 +20,8 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// Explicitly handle preflight OPTIONS requests for browsers
-app.options('*', cors()); 
+// FIX: Updated '*' to '(.*)' to be compatible with Node v22 / Express 4+ pathing
+app.options('(.*)', cors()); 
 
 app.use(express.json());
 
