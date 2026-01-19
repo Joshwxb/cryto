@@ -14,22 +14,23 @@ connectDB();
 
 // 2. Middleware
 app.use(cors({
-  origin: true, // Dynamically allows your Vercel frontend to connect
+  origin: true, 
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// FIX: Updated '*' to '(.*)' to be compatible with Node v22 / Express 4+ pathing
-app.options('(.*)', cors()); 
+// FIX FOR NODE v22: Use '/:any*' instead of '(.*)' or '*'
+// This gives the wildcard a name ('any') which satisfies the new library rules
+app.options('/:any*', cors()); 
 
 app.use(express.json());
 
 // 3. Define Routes
-app.use('/api/auth', authRoutes);    // Auth: Register/Login
-app.use('/api/trade', tradeRoutes);  // Trade: Buy/Sell Logic
+app.use('/api/auth', authRoutes);    
+app.use('/api/trade', tradeRoutes);  
 
-// Basic Route for Testing (Useful for Render Health Checks)
+// Basic Route for Testing
 app.get('/', (req, res) => {
   res.send('Crypto Trading API is live and running...');
 });
